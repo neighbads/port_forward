@@ -1,0 +1,51 @@
+stages:
+  - test
+  - build
+  - release
+
+variables:
+  APP_NAME: port_forward
+  MINGW_CC: /Workspace/Tools/buildchain/x86_64-w64-mingw32/bin/x86_64-w64-mingw32-gcc
+
+test:
+  stage: test
+  script:
+    - go test ./... -timeout 30s -v
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+build:
+  stage: build
+  script:
+    - mkdir -p bin
+    - GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.Version=${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}}" -o bin/${APP_NAME}_linux_amd64 .
+    - CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=${MINGW_CC} go build -ldflags "-s -w -X main.Version=${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}} -H windowsgui" -o bin/${APP_NAME}_windows_amd64.exe .
+  artifacts:
+    paths:
+      - bin/
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_TAG
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: build
+      artifacts: true
+  script:
+    - echo "Creating release for ${CI_COMMIT_TAG}"
+  release:
+    tag_name: ${CI_COMMIT_TAG}
+    name: "Release ${CI_COMMIT_TAG}"
+    description: "Release ${CI_COMMIT_TAG} of ${APP_NAME}"
+    assets:
+      links:
+        - name: "${APP_NAME}_linux_amd64"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/bin/${APP_NAME}_linux_amd64"
+          link_type: package
+        - name: "${APP_NAME}_windows_amd64.exe"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/bin/${APP_NAME}_windows_amd64.exe"
+          link_type: package
+  rules:
+    - if: $CI_COMMIT_TAG

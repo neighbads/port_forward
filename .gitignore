@@ -1,4 +1,3 @@
-port_forward
-port_forward.exe
-port_forward_linux
+bin/
+config.yaml
 *.exe

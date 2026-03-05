@@ -1,12 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"port_forward/cli"
 	"port_forward/gui"
 )
 
+var Version = "dev"
+
 func main() {
+	for _, a := range os.Args[1:] {
+		if a == "-version" || a == "--version" {
+			fmt.Println("port_forward", Version)
+			return
+		}
+	}
+
 	configPath := "config.yaml"
 	noUI := false
 	args := []string{}
