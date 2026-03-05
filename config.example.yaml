@@ -1,0 +1,17 @@
+defaults:
+  tcp_connect_timeout: 10s
+  tcp_idle_timeout: 300s
+  udp_session_timeout: 60s
+
+log_level: info
+
+rules:
+  - protocol: tcp
+    local: "127.0.0.1:1234"
+    remote: "0.0.0.0:1234"
+    enabled: true
+  - protocol: udp
+    local: "127.0.0.1:5000"
+    remote: "0.0.0.0:5000"
+    enabled: false
+    udp_session_timeout: 120s
