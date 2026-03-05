@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"os"
+	"port_forward/cli"
+)
 
 func main() {
-	fmt.Println("port_forward starting...")
+	args := []string{}
+	for _, a := range os.Args[1:] {
+		if a == "-noui" {
+			continue
+		}
+		args = append(args, a)
+	}
+	// For now, always CLI mode. GUI routing added later.
+	cli.Run(args)
 }
