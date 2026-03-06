@@ -16,13 +16,18 @@ import (
 // is called to retrieve the current set of entries each time the view refreshes.
 func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 	w := a.fyneApp.NewWindow(title)
-	w.Resize(fyne.NewSize(700, 400))
+	w.Resize(fyne.NewSize(750, 450))
 
 	logText := widget.NewMultiLineEntry()
+	logText.Wrapping = fyne.TextWrapWord
 	logText.Disable()
 
 	refreshLog := func() {
 		ents := entries()
+		if len(ents) == 0 {
+			logText.SetText("(no log entries)")
+			return
+		}
 		var b strings.Builder
 		for _, e := range ents {
 			b.WriteString(e.String())
@@ -37,8 +42,14 @@ func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 		refreshLog()
 	})
 
+	clearBtn := widget.NewButton("Clear", func() {
+		logText.SetText("")
+	})
+
+	toolbar := container.NewHBox(refreshBtn, clearBtn)
+
 	content := container.NewBorder(
-		container.NewHBox(refreshBtn), // top
+		toolbar, // top
 		nil,     // bottom
 		nil,     // left
 		nil,     // right
@@ -46,6 +57,7 @@ func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 	)
 	w.SetContent(content)
 	w.Show()
+	w.RequestFocus()
 
 	// Auto-refresh every 2 seconds.
 	ticker := time.NewTicker(2 * time.Second)

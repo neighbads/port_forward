@@ -3,8 +3,12 @@
 package gui
 
 import (
+	"sync"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/systray"
 	"port_forward/core/logger"
 	"port_forward/gui/icons"
 )
@@ -13,6 +17,10 @@ import (
 type Tray struct {
 	app     *App
 	deskApp desktop.App
+
+	clickMu    sync.Mutex
+	clickCount int
+	clickTimer *time.Timer
 }
 
 // NewTray creates a new system tray controller for the given App.
@@ -39,7 +47,7 @@ func (t *Tray) Setup() {
 		ShowLogView(t.app, "Global Log", logger.AllEntries)
 	})
 
-	// Log level menu items (flat list since Fyne tray has limited submenu support).
+	// Log level menu items.
 	debugItem := fyne.NewMenuItem("Log: Debug", func() {
 		logger.SetLevel(logger.Debug)
 		t.app.cfg.LogLevel = "debug"
@@ -81,6 +89,39 @@ func (t *Tray) Setup() {
 	)
 
 	t.deskApp.SetSystemTrayMenu(menu)
+
+	// Override left-click: single click = toggle service, double click = show window.
+	// Right-click still shows menu (default behavior when tappedRight is nil).
+	systray.SetOnTapped(func() {
+		t.handleClick()
+	})
+}
+
+const doubleClickInterval = 300 * time.Millisecond
+
+func (t *Tray) handleClick() {
+	t.clickMu.Lock()
+	defer t.clickMu.Unlock()
+
+	t.clickCount++
+	if t.clickCount == 1 {
+		t.clickTimer = time.AfterFunc(doubleClickInterval, func() {
+			t.clickMu.Lock()
+			count := t.clickCount
+			t.clickCount = 0
+			t.clickMu.Unlock()
+
+			if count == 1 {
+				// Single click: toggle service
+				t.app.ToggleService()
+			}
+		})
+	} else if t.clickCount >= 2 {
+		// Double click: show window
+		t.clickTimer.Stop()
+		t.clickCount = 0
+		t.app.mainWindow.Show()
+	}
 }
 
 // SetRunning updates the tray icon to indicate the service is active.

@@ -16,10 +16,8 @@ import (
 	"port_forward/core/logger"
 )
 
-const defaultConfigPath = "config.yaml"
-
 // Run is the main entry point for the CLI. It dispatches based on args[0].
-func Run(args []string) {
+func Run(args []string, configPath string) {
 	if len(args) == 0 {
 		printUsage()
 		return
@@ -27,15 +25,15 @@ func Run(args []string) {
 
 	switch args[0] {
 	case "start":
-		cmdStart(defaultConfigPath)
+		cmdStart(configPath)
 	case "add":
-		cmdAdd(args[1:], defaultConfigPath)
+		cmdAdd(args[1:], configPath)
 	case "remove":
-		cmdRemove(args[1:], defaultConfigPath)
+		cmdRemove(args[1:], configPath)
 	case "list":
-		cmdList(defaultConfigPath)
+		cmdList(configPath)
 	case "set-loglevel":
-		cmdSetLogLevel(args[1:], defaultConfigPath)
+		cmdSetLogLevel(args[1:], configPath)
 	case "help", "-h", "--help":
 		printUsage()
 	default:
