@@ -13,6 +13,20 @@ import (
 	"port_forward/core/logger"
 )
 
+// Fixed column widths to prevent layout shifts when adding/removing rows.
+var (
+	colNumW    = float32(30)
+	colProtoW  = float32(60)
+	colAddrW   = float32(180)
+	colStatusW = float32(60)
+	rowH       = float32(36)
+)
+
+// fixedCell wraps a widget in a fixed-size container.
+func fixedCell(w float32, obj fyne.CanvasObject) *fyne.Container {
+	return container.NewGridWrap(fyne.NewSize(w, rowH), obj)
+}
+
 // MainWindow is the primary management window showing all forwarding rules.
 type MainWindow struct {
 	app    *App
@@ -23,13 +37,13 @@ type MainWindow struct {
 func NewMainWindow(a *App) *MainWindow {
 	w := a.fyneApp.NewWindow("Port Forward")
 	w.Resize(fyne.NewSize(820, 500))
+	w.SetFixedSize(true)
 
 	mw := &MainWindow{
 		app:    a,
 		window: w,
 	}
 
-	// Hide instead of quit on close.
 	w.SetCloseIntercept(func() {
 		w.Hide()
 	})
@@ -45,136 +59,31 @@ func (mw *MainWindow) Show() {
 	mw.window.RequestFocus()
 }
 
+// makeRow builds a row with fixed-width cells for the first 5 columns,
+// and the remaining space for the actions column.
+func makeRow(num, proto, local, remote, status, actions fyne.CanvasObject) *fyne.Container {
+	return container.NewHBox(
+		fixedCell(colNumW, num),
+		fixedCell(colProtoW, proto),
+		fixedCell(colAddrW, local),
+		fixedCell(colAddrW, remote),
+		fixedCell(colStatusW, status),
+		actions,
+	)
+}
+
 // Refresh rebuilds the window content from current configuration state.
 func (mw *MainWindow) Refresh() {
 	cfg := mw.app.manager.GetConfig()
 
-	// Build table using widget.Table for fixed layout
-	list := widget.NewTable(
-		// size: rows = rules + 1 (header) + 1 (add row), cols = 6
-		func() (int, int) {
-			return len(cfg.Rules) + 2, 6
-		},
-		// create template
-		func() fyne.CanvasObject {
-			return container.NewStack(
-				widget.NewLabel("template text long"),
-				widget.NewButton("Action", func() {}),
-				widget.NewSelect([]string{"tcp", "udp"}, nil),
-				widget.NewEntry(),
-			)
-		},
-		// update cell
-		func(id widget.TableCellID, o fyne.CanvasObject) {
-			stack := o.(*fyne.Container)
-			label := stack.Objects[0].(*widget.Label)
-			btn := stack.Objects[1].(*widget.Button)
-			sel := stack.Objects[2].(*widget.Select)
-			entry := stack.Objects[3].(*widget.Entry)
-
-			// Hide all by default
-			label.Hide()
-			btn.Hide()
-			sel.Hide()
-			entry.Hide()
-
-			row := id.Row
-			col := id.Col
-
-			if row == 0 {
-				// Header row
-				label.Show()
-				label.TextStyle = fyne.TextStyle{Bold: true}
-				switch col {
-				case 0:
-					label.SetText("#")
-				case 1:
-					label.SetText("Protocol")
-				case 2:
-					label.SetText("Local")
-				case 3:
-					label.SetText("Remote")
-				case 4:
-					label.SetText("Status")
-				case 5:
-					label.SetText("Actions")
-				}
-				return
-			}
-
-			ruleIdx := row - 1
-
-			if ruleIdx < len(cfg.Rules) {
-				// Data row
-				rule := cfg.Rules[ruleIdx]
-				idx := ruleIdx
-
-				switch col {
-				case 0:
-					label.Show()
-					label.TextStyle = fyne.TextStyle{}
-					label.SetText(fmt.Sprintf("%d", idx+1))
-				case 1:
-					label.Show()
-					label.TextStyle = fyne.TextStyle{}
-					label.SetText(rule.Protocol)
-				case 2:
-					label.Show()
-					label.TextStyle = fyne.TextStyle{}
-					label.SetText(rule.Local)
-				case 3:
-					label.Show()
-					label.TextStyle = fyne.TextStyle{}
-					label.SetText(rule.Remote)
-				case 4:
-					label.Show()
-					label.TextStyle = fyne.TextStyle{}
-					if rule.Enabled {
-						label.SetText("Enabled")
-					} else {
-						label.SetText("Disabled")
-					}
-				case 5:
-					// Action buttons - use a label-as-container approach
-					// We'll use the button for the primary action
-					btn.Show()
-					if rule.Enabled {
-						btn.SetText("Disable")
-					} else {
-						btn.SetText("Enable")
-					}
-					btn.OnTapped = func() {
-						if cfg.Rules[idx].Enabled {
-							_ = mw.app.manager.DisableRule(idx)
-						} else {
-							_ = mw.app.manager.EnableRule(idx)
-						}
-						mw.app.SaveConfig()
-						mw.Refresh()
-					}
-				}
-			}
-		},
-	)
-
-	// Set column widths
-	list.SetColumnWidth(0, 40)   // #
-	list.SetColumnWidth(1, 80)   // Protocol
-	list.SetColumnWidth(2, 200)  // Local
-	list.SetColumnWidth(3, 200)  // Remote
-	list.SetColumnWidth(4, 80)   // Status
-	list.SetColumnWidth(5, 100)  // Actions
-
-	// Build a simpler approach: VBox with rows instead of Table (Table has cell reuse issues with buttons)
-	// Let's use the straightforward VBox approach but with fixed-size window
-	header := container.NewGridWithColumns(7,
+	// Header
+	header := makeRow(
 		widget.NewLabelWithStyle("#", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Protocol", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Local", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Remote", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("Status", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabel(""), // spacer for actions
-		widget.NewLabel(""), // spacer for actions
+		widget.NewLabelWithStyle("\u534f\u8bae", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("\u672c\u5730\u5730\u5740", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("\u8fdc\u7a0b\u5730\u5740", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("\u72b6\u6001", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("\u64cd\u4f5c", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
 	rows := container.NewVBox(header, widget.NewSeparator())
@@ -183,9 +92,9 @@ func (mw *MainWindow) Refresh() {
 		idx := i
 		r := rule
 
-		toggleText := "Enable"
+		toggleText := "\u542f\u7528"
 		if r.Enabled {
-			toggleText = "Disable"
+			toggleText = "\u7981\u7528"
 		}
 
 		toggleBtn := widget.NewButton(toggleText, func() {
@@ -204,42 +113,41 @@ func (mw *MainWindow) Refresh() {
 			mw.Refresh()
 		})
 
-		logBtn := widget.NewButtonWithIcon("Log", theme.DocumentIcon(), func() {
+		logBtn := widget.NewButtonWithIcon("\u65e5\u5fd7", theme.DocumentIcon(), func() {
 			ruleID := fmt.Sprintf("%s/%s->%s", r.Protocol, r.Local, r.Remote)
 			rl := logger.GetLogger(ruleID)
-			ShowLogView(mw.app, fmt.Sprintf("Log: %s", ruleID), rl.Entries)
+			ShowLogView(mw.app, fmt.Sprintf("\u65e5\u5fd7: %s", ruleID), rl.Entries)
 		})
 
 		actions := container.NewHBox(toggleBtn, deleteBtn, logBtn)
 
-		status := "Disabled"
+		status := "\u7981\u7528"
 		if r.Enabled {
-			status = "Enabled"
+			status = "\u542f\u7528"
 		}
 
-		row := container.NewGridWithColumns(7,
+		row := makeRow(
 			widget.NewLabel(fmt.Sprintf("%d", idx+1)),
 			widget.NewLabel(r.Protocol),
 			widget.NewLabel(r.Local),
 			widget.NewLabel(r.Remote),
 			widget.NewLabel(status),
 			actions,
-			widget.NewLabel(""),
 		)
 		rows.Add(row)
 	}
 
-	// Add-rule row
+	// Add-rule row: "+" button in first column triggers add.
 	rows.Add(widget.NewSeparator())
 
 	protoSelect := widget.NewSelect([]string{"tcp", "udp"}, nil)
 	protoSelect.SetSelected("tcp")
 	localEntry := widget.NewEntry()
-	localEntry.SetPlaceHolder("127.0.0.1:1234")
+	localEntry.SetPlaceHolder("0.0.0.0:5678")
 	remoteEntry := widget.NewEntry()
-	remoteEntry.SetPlaceHolder("0.0.0.0:5678")
+	remoteEntry.SetPlaceHolder("127.0.0.1:1234")
 
-	addBtn := widget.NewButtonWithIcon("Add", theme.ContentAddIcon(), func() {
+	doAdd := func() {
 		proto := protoSelect.Selected
 		if proto == "" {
 			proto = "tcp"
@@ -253,22 +161,23 @@ func (mw *MainWindow) Refresh() {
 			Protocol: proto,
 			Local:    local,
 			Remote:   remote,
-			Enabled:  false, // new rules start disabled
+			Enabled:  false,
 		}
 		_ = mw.app.manager.AddRule(rule)
 		mw.app.SaveConfig()
 		localEntry.SetText("")
 		remoteEntry.SetText("")
 		mw.Refresh()
-	})
+	}
 
-	addRow := container.NewGridWithColumns(7,
-		widget.NewLabel("+"),
+	addBtn := widget.NewButtonWithIcon("", theme.ContentAddIcon(), doAdd)
+
+	addRow := makeRow(
+		addBtn,
 		protoSelect,
 		localEntry,
 		remoteEntry,
 		widget.NewLabel(""),
-		addBtn,
 		widget.NewLabel(""),
 	)
 	rows.Add(addRow)

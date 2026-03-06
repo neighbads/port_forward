@@ -12,20 +12,18 @@ import (
 	"port_forward/core/logger"
 )
 
-// ShowLogView opens a new window displaying log entries. The entries function
-// is called to retrieve the current set of entries each time the view refreshes.
+// ShowLogView opens a new window displaying log entries with black text.
 func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 	w := a.fyneApp.NewWindow(title)
 	w.Resize(fyne.NewSize(750, 450))
 
-	logText := widget.NewMultiLineEntry()
-	logText.Wrapping = fyne.TextWrapWord
-	logText.Disable()
+	logLabel := widget.NewLabel("")
+	logLabel.Wrapping = fyne.TextWrapWord
 
 	refreshLog := func() {
 		ents := entries()
 		if len(ents) == 0 {
-			logText.SetText("(no log entries)")
+			logLabel.SetText("(\u6682\u65e0\u65e5\u5fd7)")
 			return
 		}
 		var b strings.Builder
@@ -33,27 +31,25 @@ func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 			b.WriteString(e.String())
 			b.WriteByte('\n')
 		}
-		logText.SetText(b.String())
+		logLabel.SetText(b.String())
 	}
 
 	refreshLog()
 
-	refreshBtn := widget.NewButton("Refresh", func() {
+	refreshBtn := widget.NewButton("\u5237\u65b0", func() {
 		refreshLog()
 	})
 
-	clearBtn := widget.NewButton("Clear", func() {
-		logText.SetText("")
-	})
+	toolbar := container.NewHBox(refreshBtn)
 
-	toolbar := container.NewHBox(refreshBtn, clearBtn)
+	scrollable := container.NewVScroll(logLabel)
 
 	content := container.NewBorder(
-		toolbar, // top
-		nil,     // bottom
-		nil,     // left
-		nil,     // right
-		logText, // center
+		toolbar,    // top
+		nil,        // bottom
+		nil,        // left
+		nil,        // right
+		scrollable, // center
 	)
 	w.SetContent(content)
 	w.Show()

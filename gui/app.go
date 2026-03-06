@@ -54,6 +54,12 @@ func RunGUI(configPath string) {
 	a.mainWindow = NewMainWindow(a)
 	a.tray = NewTray(a)
 	a.tray.Setup()
+
+	// Auto-start service on GUI launch.
+	_ = a.manager.StartAll()
+	a.running = true
+	a.tray.SetRunning()
+
 	a.fyneApp.Run()
 }
 

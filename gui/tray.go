@@ -35,41 +35,31 @@ func NewTray(a *App) *Tray {
 func (t *Tray) Setup() {
 	t.SetStopped()
 
-	toggleItem := fyne.NewMenuItem("Toggle Service", func() {
+	toggleItem := fyne.NewMenuItem("\u5207\u6362\u670d\u52a1", func() {
 		t.app.ToggleService()
 	})
 
-	showItem := fyne.NewMenuItem("Show Window", func() {
+	showItem := fyne.NewMenuItem("\u6253\u5f00\u7a97\u53e3", func() {
 		t.app.mainWindow.Show()
 	})
 
-	viewLogItem := fyne.NewMenuItem("View Log", func() {
-		ShowLogView(t.app, "Global Log", logger.AllEntries)
+	viewLogItem := fyne.NewMenuItem("\u67e5\u770b\u65e5\u5fd7", func() {
+		ShowLogView(t.app, "\u5168\u5c40\u65e5\u5fd7", logger.AllEntries)
 	})
 
-	// Log level menu items.
-	debugItem := fyne.NewMenuItem("Log: Debug", func() {
-		logger.SetLevel(logger.Debug)
-		t.app.cfg.LogLevel = "debug"
-		t.app.SaveConfig()
-	})
-	infoItem := fyne.NewMenuItem("Log: Info", func() {
+	// Log level: only two options — info and debug.
+	infoItem := fyne.NewMenuItem("\u65e5\u5fd7\u7ea7\u522b: \u4fe1\u606f", func() {
 		logger.SetLevel(logger.Info)
 		t.app.cfg.LogLevel = "info"
 		t.app.SaveConfig()
 	})
-	warnItem := fyne.NewMenuItem("Log: Warn", func() {
-		logger.SetLevel(logger.Warn)
-		t.app.cfg.LogLevel = "warn"
-		t.app.SaveConfig()
-	})
-	errorItem := fyne.NewMenuItem("Log: Error", func() {
-		logger.SetLevel(logger.Error)
-		t.app.cfg.LogLevel = "error"
+	debugItem := fyne.NewMenuItem("\u65e5\u5fd7\u7ea7\u522b: \u8c03\u8bd5", func() {
+		logger.SetLevel(logger.Debug)
+		t.app.cfg.LogLevel = "debug"
 		t.app.SaveConfig()
 	})
 
-	quitItem := fyne.NewMenuItem("Quit", func() {
+	quitItem := fyne.NewMenuItem("\u9000\u51fa", func() {
 		t.app.manager.StopAll()
 		t.app.fyneApp.Quit()
 	})
@@ -80,10 +70,8 @@ func (t *Tray) Setup() {
 		fyne.NewMenuItemSeparator(),
 		viewLogItem,
 		fyne.NewMenuItemSeparator(),
-		debugItem,
 		infoItem,
-		warnItem,
-		errorItem,
+		debugItem,
 		fyne.NewMenuItemSeparator(),
 		quitItem,
 	)
@@ -91,7 +79,6 @@ func (t *Tray) Setup() {
 	t.deskApp.SetSystemTrayMenu(menu)
 
 	// Override left-click: single click = toggle service, double click = show window.
-	// Right-click still shows menu (default behavior when tappedRight is nil).
 	systray.SetOnTapped(func() {
 		t.handleClick()
 	})
@@ -112,12 +99,10 @@ func (t *Tray) handleClick() {
 			t.clickMu.Unlock()
 
 			if count == 1 {
-				// Single click: toggle service
 				t.app.ToggleService()
 			}
 		})
 	} else if t.clickCount >= 2 {
-		// Double click: show window
 		t.clickTimer.Stop()
 		t.clickCount = 0
 		t.app.mainWindow.Show()
