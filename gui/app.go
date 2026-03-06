@@ -8,6 +8,7 @@ import (
 	"port_forward/core/config"
 	"port_forward/core/forwarder"
 	"port_forward/core/logger"
+	"port_forward/gui/icons"
 )
 
 // App holds the top-level GUI application state.
@@ -50,6 +51,9 @@ func RunGUI(configPath string) {
 		cfg:        cfg,
 		configPath: configPath,
 	}
+
+	// Set app icon.
+	a.fyneApp.SetIcon(fyne.NewStaticResource("appicon.png", icons.AppIcon))
 
 	a.mainWindow = NewMainWindow(a)
 	a.tray = NewTray(a)

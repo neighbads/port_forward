@@ -11,18 +11,18 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"port_forward/core/config"
 	"port_forward/core/logger"
+	"port_forward/gui/icons"
 )
 
-// Fixed column widths to prevent layout shifts when adding/removing rows.
+// Fixed column widths.
 var (
-	colNumW    = float32(30)
-	colProtoW  = float32(60)
-	colAddrW   = float32(180)
-	colStatusW = float32(60)
-	rowH       = float32(36)
+	colNumW   = float32(30)
+	colProtoW = float32(120)
+	colAddrW  = float32(180)
+	colChkW   = float32(40)
+	rowH      = float32(36)
 )
 
-// fixedCell wraps a widget in a fixed-size container.
 func fixedCell(w float32, obj fyne.CanvasObject) *fyne.Container {
 	return container.NewGridWrap(fyne.NewSize(w, rowH), obj)
 }
@@ -35,9 +35,10 @@ type MainWindow struct {
 
 // NewMainWindow creates the main window (hidden by default).
 func NewMainWindow(a *App) *MainWindow {
-	w := a.fyneApp.NewWindow("Port Forward")
-	w.Resize(fyne.NewSize(820, 500))
+	w := a.fyneApp.NewWindow("\u7aef\u53e3\u8f6c\u53d1\u670d\u52a1")
+	w.Resize(fyne.NewSize(780, 500))
 	w.SetFixedSize(true)
+	w.SetIcon(fyne.NewStaticResource("appicon.png", icons.AppIcon))
 
 	mw := &MainWindow{
 		app:    a,
@@ -59,15 +60,14 @@ func (mw *MainWindow) Show() {
 	mw.window.RequestFocus()
 }
 
-// makeRow builds a row with fixed-width cells for the first 5 columns,
-// and the remaining space for the actions column.
-func makeRow(num, proto, local, remote, status, actions fyne.CanvasObject) *fyne.Container {
+// makeRow builds a row: #, protocol, local, remote, toggle, actions
+func makeRow(num, proto, local, remote, toggle, actions fyne.CanvasObject) *fyne.Container {
 	return container.NewHBox(
 		fixedCell(colNumW, num),
 		fixedCell(colProtoW, proto),
 		fixedCell(colAddrW, local),
 		fixedCell(colAddrW, remote),
-		fixedCell(colStatusW, status),
+		fixedCell(colChkW, toggle),
 		actions,
 	)
 }
@@ -76,13 +76,12 @@ func makeRow(num, proto, local, remote, status, actions fyne.CanvasObject) *fyne
 func (mw *MainWindow) Refresh() {
 	cfg := mw.app.manager.GetConfig()
 
-	// Header
 	header := makeRow(
 		widget.NewLabelWithStyle("#", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("\u534f\u8bae", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("\u672c\u5730\u5730\u5740", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("\u8fdc\u7a0b\u5730\u5740", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("\u72b6\u6001", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("\u64cd\u4f5c", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
@@ -92,20 +91,15 @@ func (mw *MainWindow) Refresh() {
 		idx := i
 		r := rule
 
-		toggleText := "\u542f\u7528"
-		if r.Enabled {
-			toggleText = "\u7981\u7528"
-		}
-
-		toggleBtn := widget.NewButton(toggleText, func() {
-			if cfg.Rules[idx].Enabled {
-				_ = mw.app.manager.DisableRule(idx)
-			} else {
+		toggle := widget.NewCheck("", func(checked bool) {
+			if checked {
 				_ = mw.app.manager.EnableRule(idx)
+			} else {
+				_ = mw.app.manager.DisableRule(idx)
 			}
 			mw.app.SaveConfig()
-			mw.Refresh()
 		})
+		toggle.Checked = r.Enabled
 
 		deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			_ = mw.app.manager.RemoveRule(idx)
@@ -113,31 +107,26 @@ func (mw *MainWindow) Refresh() {
 			mw.Refresh()
 		})
 
-		logBtn := widget.NewButtonWithIcon("\u65e5\u5fd7", theme.DocumentIcon(), func() {
+		logBtn := widget.NewButtonWithIcon("", theme.DocumentIcon(), func() {
 			ruleID := fmt.Sprintf("%s/%s->%s", r.Protocol, r.Local, r.Remote)
 			rl := logger.GetLogger(ruleID)
 			ShowLogView(mw.app, fmt.Sprintf("\u65e5\u5fd7: %s", ruleID), rl.Entries)
 		})
 
-		actions := container.NewHBox(toggleBtn, deleteBtn, logBtn)
-
-		status := "\u7981\u7528"
-		if r.Enabled {
-			status = "\u542f\u7528"
-		}
+		actions := container.NewHBox(deleteBtn, logBtn)
 
 		row := makeRow(
 			widget.NewLabel(fmt.Sprintf("%d", idx+1)),
 			widget.NewLabel(r.Protocol),
 			widget.NewLabel(r.Local),
 			widget.NewLabel(r.Remote),
-			widget.NewLabel(status),
+			toggle,
 			actions,
 		)
 		rows.Add(row)
 	}
 
-	// Add-rule row: "+" button in first column triggers add.
+	// Add-rule row
 	rows.Add(widget.NewSeparator())
 
 	protoSelect := widget.NewSelect([]string{"tcp", "udp"}, nil)
@@ -161,7 +150,7 @@ func (mw *MainWindow) Refresh() {
 			Protocol: proto,
 			Local:    local,
 			Remote:   remote,
-			Enabled:  false,
+			Enabled:  true, // new rules start enabled
 		}
 		_ = mw.app.manager.AddRule(rule)
 		mw.app.SaveConfig()
