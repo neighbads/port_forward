@@ -36,7 +36,7 @@ type MainWindow struct {
 // NewMainWindow creates the main window (hidden by default).
 func NewMainWindow(a *App) *MainWindow {
 	w := a.fyneApp.NewWindow("\u7aef\u53e3\u8f6c\u53d1\u670d\u52a1")
-	w.Resize(fyne.NewSize(780, 500))
+	w.Resize(fyne.NewSize(700, 500))
 	w.SetFixedSize(true)
 	w.SetIcon(fyne.NewStaticResource("appicon.png", icons.AppIcon))
 
@@ -48,6 +48,7 @@ func NewMainWindow(a *App) *MainWindow {
 	w.SetCloseIntercept(func() {
 		w.Hide()
 	})
+	w.CenterOnScreen()
 
 	mw.Refresh()
 	return mw
@@ -91,15 +92,14 @@ func (mw *MainWindow) Refresh() {
 		idx := i
 		r := rule
 
-		toggle := widget.NewCheck("", func(checked bool) {
-			if checked {
+		toggle := NewToggleSwitch(r.Enabled, func(on bool) {
+			if on {
 				_ = mw.app.manager.EnableRule(idx)
 			} else {
 				_ = mw.app.manager.DisableRule(idx)
 			}
 			mw.app.SaveConfig()
 		})
-		toggle.Checked = r.Enabled
 
 		deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			_ = mw.app.manager.RemoveRule(idx)
@@ -116,10 +116,10 @@ func (mw *MainWindow) Refresh() {
 		actions := container.NewHBox(deleteBtn, logBtn)
 
 		row := makeRow(
-			widget.NewLabel(fmt.Sprintf("%d", idx+1)),
-			widget.NewLabel(r.Protocol),
-			widget.NewLabel(r.Local),
-			widget.NewLabel(r.Remote),
+			widget.NewLabelWithStyle(fmt.Sprintf("%d", idx+1), fyne.TextAlignCenter, fyne.TextStyle{}),
+			widget.NewLabelWithStyle(r.Protocol, fyne.TextAlignCenter, fyne.TextStyle{}),
+			widget.NewLabelWithStyle(r.Local, fyne.TextAlignCenter, fyne.TextStyle{}),
+			widget.NewLabelWithStyle(r.Remote, fyne.TextAlignCenter, fyne.TextStyle{}),
 			toggle,
 			actions,
 		)
@@ -130,10 +130,11 @@ func (mw *MainWindow) Refresh() {
 	rows.Add(widget.NewSeparator())
 
 	protoSelect := widget.NewSelect([]string{"tcp", "udp"}, nil)
+	protoSelect.Alignment = fyne.TextAlignCenter
 	protoSelect.SetSelected("tcp")
-	localEntry := widget.NewEntry()
+	localEntry := NewCenteredEntry()
 	localEntry.SetPlaceHolder("0.0.0.0:5678")
-	remoteEntry := widget.NewEntry()
+	remoteEntry := NewCenteredEntry()
 	remoteEntry.SetPlaceHolder("127.0.0.1:1234")
 
 	doAdd := func() {
@@ -162,12 +163,12 @@ func (mw *MainWindow) Refresh() {
 	addBtn := widget.NewButtonWithIcon("", theme.ContentAddIcon(), doAdd)
 
 	addRow := makeRow(
-		addBtn,
+		widget.NewLabel(""),
 		protoSelect,
 		localEntry,
 		remoteEntry,
 		widget.NewLabel(""),
-		widget.NewLabel(""),
+		addBtn,
 	)
 	rows.Add(addRow)
 

@@ -2,3 +2,4 @@ bin/
 config.yaml
 *.exe
 *.syso
+/port_forward

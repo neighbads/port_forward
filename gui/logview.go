@@ -13,9 +13,12 @@ import (
 )
 
 // ShowLogView opens a new window displaying log entries with black text.
+// The window is positioned above the main window.
 func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 	w := a.fyneApp.NewWindow(title)
-	w.Resize(fyne.NewSize(750, 450))
+	logW := float32(900)
+	logH := float32(500)
+	w.Resize(fyne.NewSize(logW, logH))
 
 	logLabel := widget.NewLabel("")
 	logLabel.Wrapping = fyne.TextWrapWord
@@ -40,7 +43,11 @@ func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 		refreshLog()
 	})
 
-	toolbar := container.NewHBox(refreshBtn)
+	clearBtn := widget.NewButton("\u6e05\u9664", func() {
+		logLabel.SetText("(\u6682\u65e0\u65e5\u5fd7)")
+	})
+
+	toolbar := container.NewHBox(refreshBtn, clearBtn)
 
 	scrollable := container.NewVScroll(logLabel)
 
@@ -52,6 +59,7 @@ func ShowLogView(a *App, title string, entries func() []logger.Entry) {
 		scrollable, // center
 	)
 	w.SetContent(content)
+	w.CenterOnScreen()
 	w.Show()
 	w.RequestFocus()
 

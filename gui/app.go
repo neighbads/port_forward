@@ -5,6 +5,7 @@ package gui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/systray"
 	"port_forward/core/config"
 	"port_forward/core/forwarder"
 	"port_forward/core/logger"
@@ -63,6 +64,12 @@ func RunGUI(configPath string) {
 	_ = a.manager.StartAll()
 	a.running = true
 	a.tray.SetRunning()
+
+	a.fyneApp.Lifecycle().SetOnExitedForeground(func() {})
+	a.fyneApp.Lifecycle().SetOnStopped(func() {
+		a.manager.StopAll()
+		systray.Quit()
+	})
 
 	a.fyneApp.Run()
 }

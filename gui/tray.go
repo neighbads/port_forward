@@ -47,20 +47,35 @@ func (t *Tray) Setup() {
 		ShowLogView(t.app, "\u5168\u5c40\u65e5\u5fd7", logger.AllEntries)
 	})
 
-	// Log level: only two options — info and debug.
-	infoItem := fyne.NewMenuItem("\u65e5\u5fd7\u7ea7\u522b: \u4fe1\u606f", func() {
+	// Log level: submenu with checked state.
+	var infoItem, debugItem *fyne.MenuItem
+	updateLogLevelChecks := func() {
+		cur := logger.GetLevel()
+		infoItem.Checked = (cur == logger.Info)
+		debugItem.Checked = (cur == logger.Debug)
+	}
+	infoItem = fyne.NewMenuItem("\u4fe1\u606f", func() {
 		logger.SetLevel(logger.Info)
 		t.app.cfg.LogLevel = "info"
 		t.app.SaveConfig()
+		updateLogLevelChecks()
 	})
-	debugItem := fyne.NewMenuItem("\u65e5\u5fd7\u7ea7\u522b: \u8c03\u8bd5", func() {
+	debugItem = fyne.NewMenuItem("\u8c03\u8bd5", func() {
 		logger.SetLevel(logger.Debug)
 		t.app.cfg.LogLevel = "debug"
 		t.app.SaveConfig()
+		updateLogLevelChecks()
 	})
+	logLevelItem := fyne.NewMenuItem("\u65e5\u5fd7\u7ea7\u522b", nil)
+	logLevelItem.ChildMenu = fyne.NewMenu("",
+		infoItem,
+		debugItem,
+	)
+	updateLogLevelChecks()
 
 	quitItem := fyne.NewMenuItem("\u9000\u51fa", func() {
 		t.app.manager.StopAll()
+		systray.Quit()
 		t.app.fyneApp.Quit()
 	})
 
@@ -69,9 +84,7 @@ func (t *Tray) Setup() {
 		showItem,
 		fyne.NewMenuItemSeparator(),
 		viewLogItem,
-		fyne.NewMenuItemSeparator(),
-		infoItem,
-		debugItem,
+		logLevelItem,
 		fyne.NewMenuItemSeparator(),
 		quitItem,
 	)
